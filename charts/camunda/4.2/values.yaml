@@ -1,0 +1,99 @@
+# Default values for zeebe.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+broker:
+  image:
+    repository: registry.tecnotree.com/common-dap/dap-zeebe-broker
+    tag: 0.20.2
+    pullPolicy: IfNotPresent
+    
+opr:
+  image:
+    repository: registry.tecnotree.com/mirror/registry.docker.io/camunda/operate
+    tag: 1.1.0-alpha1
+    pullPolicy: IfNotPresent
+
+sm:
+  replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+hostpath:
+  enabled: true
+
+service:
+  type: ClusterIP
+  http:
+    port: 9600    # zeebe readiness probe
+
+ingress:
+  enabled: false
+  operate:
+    enabled: false
+
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths: []
+
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 7
+    memory: 16Gi
+  requests:
+    cpu: 1
+    memory: 10Gi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+server_port: 26500
+
+zeebe:
+  java_heap: "-Xms8g -Xmx8g"
+
+## Persist data to a persistent volume
+persistence:
+  enabled: true
+  ## zeebe data Persistent Volume Storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  # storageClass: "-"
+  accessMode: ReadWriteOnce
+  size: 5Gi
+
+readinessProbe:
+  failureThreshold: 1
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+## elasticsearch exporter   
+elasticsearch:
+  uri: http://elastic.om.devtestlab2.tecnotree.com/
+hpa:
+  enabled: false
+  
+zeebe_log_path: "/tmp/zeebe/logs"

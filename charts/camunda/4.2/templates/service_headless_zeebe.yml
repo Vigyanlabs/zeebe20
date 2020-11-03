@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zeebe
+  labels:
+    app: zeebe
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - port: 9600
+    protocol: TCP
+    name:  http
+  - port: 26500
+    protocol: TCP
+    name: gateway
+  - port: 26501
+    protocol: TCP
+    name: command
+  - port: 26502
+    protocol: TCP
+    name: internal
+  - port: 5701
+    protocol: TCP
+    name: hazelcast
+  selector:
+    app: zeebe

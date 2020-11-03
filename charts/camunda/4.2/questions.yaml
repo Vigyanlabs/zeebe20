@@ -1,0 +1,255 @@
+questions:
+  # Image
+  - variable: broker.image.repository
+    label: Camunda Zeebe Image
+    type: string
+    default: registry.tecnotree.com/mirror/registry.docker.io/camunda/zeebe
+    required: true
+    group: Image
+    
+  - variable: broker.image.tag
+    label: Camunda Zeebe Image Tag
+    type: string
+    default: 0.20.2
+    required: true
+    group: Image
+    
+  - variable: opr.image.repository
+    label: Camunda Operate Image
+    type: string
+    default: registry.tecnotree.com/mirror/registry.docker.io/camunda/operate
+    required: true
+    group: Image
+    
+  - variable: opr.image.tag
+    label: Camunda Operate Image Tag
+    type: string
+    default: 1.1.0-alpha1
+    required: true
+    group: Image
+  
+  # Camunda-operate
+  - variable: ingress.operate.enabled
+    label: Enable Ingress
+    type: boolean
+    default: false
+    required: true
+    group: Camunda-operate
+    show_subquestion_if: true
+    subquestions:
+      - variable: ingress.operate.host
+        label: External hostname
+        description: User facing hostname of the system
+        type: string
+        default: operate.cluster1.devtestlab2.tecnotree.com
+        
+      - variable: ingress.operate.path
+        label: Path prefix
+        description: "NOTE: Include leading and trailing slashes!"
+        type: string
+        default: /
+        
+  - variable: haproxy.enabled
+    label: Enable Haproxy
+    type: boolean
+    default: false
+    required: true
+    group: Camunda-operate
+    show_subquestion_if: true
+    subquestions:
+      - variable: haproxy.host
+        label: Haproxy hostname
+        description: User facing hostname of the system
+        type: string
+        default: operate.cluster1.devtestlab2.tecnotree.com
+    
+  - variable: ingress.operate.tls.enabled
+    label: Enable TLS
+    type: boolean
+    default: false
+    required: true
+    group: Camunda-operate
+    show_subquestion_if: true
+    subquestions:
+      - variable: ingress.operate.tls.secret
+        label: TLS certificate secret name
+        type: string
+        
+  # Zeebe-Broker
+  - variable: persistence.enabled
+    label: Enable Persistence Volume for Zeebe Data
+    type: boolean
+    default: true
+    required: true
+    group: Zeebe-Broker
+    show_subquestion_if: true
+    subquestions:
+      - variable: persistence.storageClass
+        label: Storage class
+        description: Preferably use "vmware-he6-x1-2-adv-data12"
+        type: storageclass
+
+      - variable: persistence.size
+        label: Size of volume claim
+        description: Size of persistence Storage Volume
+        type: string
+        default: 10Gi
+        required: true
+
+  - variable: zeebe_log_level
+    label: LOG LEVEL for zeebe logs
+    description: LOG LEVEL for zeebe logs
+    type: enum
+    default: debug
+    options:
+      - info
+      - debug
+      - error      
+    required: true
+    group: Zeebe-Broker
+
+  - variable: hostpath.enabled
+    label: Enable Hostpath Volume to mount the /usr/local/zeebe/logs on host [Recommended]. If false,  logs will not written on host
+    type: boolean
+    default: true
+    required: true
+    group: Zeebe-Broker
+    show_subquestion_if: true
+    subquestions:
+    - variable: zeebe_log_path
+      label: zeebe_log_path
+      description: Enter the Host path to mount the /usr/local/zeebe/logs
+      type: string
+      default: "/tmp/zeebe/logs"
+      required: true
+      group: Zeebe-Broker
+
+      
+  - variable: elasticsearch.uri
+    label: elasticsearch url
+    description: elasticsearch uri
+    type: string
+    default: http://elastic.om.devtestlab2.tecnotree.com/
+    required: false
+    group: Zeebe-Broker
+    
+  - variable: zeebe_cluster_size
+    label: Zeebe Cluster Size
+    description: Zeebe Cluster Size
+    type: int
+    default: 7
+    required: true
+    group: Zeebe-Broker
+    
+  - variable: zeebe_partitions_count
+    label: Zeebe Partitions Count
+    description: Zeebe Partitions Count
+    type: int
+    default: 70
+    required: true
+    group: Zeebe-Broker
+
+  - variable: zeebe_gateway_timeout
+    label: GATEWAY TIMEOUT TO BROKER
+    description: Enter Timeout  in seconds as shown in default values
+    type: string
+    default: 3s
+    required: true
+    group: Zeebe-Broker
+    
+  - variable: replication_factor
+    label: Zeebe Replication Factor
+    description: Zeebe Replication Factor for HA must be minimum 3 or 5/7/9 for qorum majority election
+    type: int
+    default: 3
+    required: true
+    group: Zeebe-Broker
+    
+  - variable: cputhreadcount
+    label: CPU Thread Count
+    description: CPU Thread Count
+    type: int
+    default: 5
+    required: true
+    group: Zeebe-Broker
+    
+  - variable: iothreadcount
+    label: I/O Thread Count
+    description: I/O Thread Count
+    type: int
+    default: 2
+    required: true
+    group: Zeebe-Broker
+
+  - variable: zeebe.java_heap
+    label: zeebe java heap memory GB
+    description: Recommended to set the minimum heap size (-Xms)g and maximum heap size (-Xmx)g to be equal
+    type: string
+    default: "-Xms8g -Xmx8g"
+    required: true
+    group: Zeebe-Broker
+    
+  - variable: zeebe_cluster_name
+    label: Zeebe Cluster Name
+    description: Zeebe Cluster Name
+    type: string
+    default: csu
+    required: true
+    group: Zeebe-Broker
+    
+  #Camunda-operate
+  - variable: elasticsearch_host
+    label: Elasticsearch hostname
+    description: Elasticsearch hostname <servicename>.<stackname> for Camunda Operate
+    type: string
+    default: elastic.om.devtestlab2.tecnotree.com
+    required: true
+    group: Camunda-operate
+    
+  - variable: elasticsearch_port
+    label: Elasticsearch Port
+    description: Elasticsearch Port <servicename>.<stackname> for Camunda Operate
+    type: string
+    default: 80
+    required: true
+    group: Camunda-operate
+    
+  - variable: zeebe_brokercontactpoint
+    label: zeebe_brokercontactpoint
+    description: zeebe_brokercontactpoint
+    type: string
+    default: zeebe.dap:26500
+    required: true
+    group: Camunda-operate
+        
+  - variable: sm.replicaCount
+    label: Replica Count
+    description: Replica Count
+    type: int
+    default: 1
+    required: true
+    group: Camunda-operate   
+    
+  #Resources
+  - variable: hpa.enabled
+    label: Enable Auto Scaling
+    type: boolean
+    default: false
+    required: true
+    group: Resources
+    
+#  - variable: cpu
+#    label: CPU
+#    description: Provide CPU in m e.x 1 core= 1000m
+#    type: string
+#    default: 1000
+#    required: true
+#    group: Resources
+    
+#  - variable: memory
+#    label: Memory
+#    description: Provide Memory in Mi e.x 1 GB= 1024Mi
+#    type: string
+#    default: 2048
+#    required: true
+#    group: Resources

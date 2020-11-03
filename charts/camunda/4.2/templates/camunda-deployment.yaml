@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ include "camunda.fullname" . }}-operate"
+  labels:
+    app.kubernetes.io/name: "{{ include "camunda.fullname" . }}-operate"
+    helm.sh/chart: {{ include "camunda.chart" . | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+spec:
+  replicas: {{ .Values.sm.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: "{{ include "camunda.name" . }}-operate"
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: "{{ include "camunda.name" . }}-operate"
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    spec:
+      containers:
+        - name: "camunda-operate"
+          image: "{{ .Values.opr.image.repository }}:{{ .Values.opr.image.tag }}"
+          imagePullPolicy: {{ .Values.opr.image.pullPolicy | quote }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 20
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 20
+            timeoutSeconds: 2
+            periodSeconds: 10
+            failureThreshold: 3
+          env:                    
+            - name: CAMUNDA_OPERATE_ELASTICSEARCH_HOST
+              value: {{ .Values.elasticsearch_host  | quote }}
+            - name: CAMUNDA_OPERATE_ELASTICSEARCH_PORT
+              value: {{ .Values.elasticsearch_port  | quote }}
+            - name: CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_HOST
+              value: {{ .Values.elasticsearch_host  | quote }}
+            - name: CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_PORT
+              value: {{ .Values.elasticsearch_port  | quote }}
+            - name: CAMUNDA_OPERATE_ZEEBE_BROKERCONTACTPOINT
+              value: {{ .Values.zeebe_brokercontactpoint  | quote }}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

@@ -1,0 +1,181 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zeebe-config
+data:
+  startup.sh: |
+    #!/bin/bash -xeu
+
+    configFile=/usr/local/zeebe/conf/zeebe.cfg.toml
+    export ZEEBE_HOST=${ZEEBE_HOST:-$(hostname -f)}
+    export ZEEBE_GATEWAY_CLUSTER_HOST=${ZEEBE_GATEWAY_CLUSTER_HOST:-${ZEEBE_HOST}}
+    export ZEEBE_NODE_ID="${HOSTNAME##*-}"
+    export ZEEBE_BROKER_CLUSTER_GOSSIPBROADCASTUPDATES=true
+    
+    # We need to specify all brokers as contact points for partition healing to work correctly
+    # https://github.com/zeebe-io/zeebe/issues/2684
+    ZEEBE_CONTACT_POINTS=${HOSTNAME::-1}0.$(hostname -d):26502
+    for (( i=1; i<$ZEEBE_CLUSTER_SIZE; i++ ))
+    do
+        ZEEBE_CONTACT_POINTS="${ZEEBE_CONTACT_POINTS},${HOSTNAME::-1}$i.$(hostname -d):26502"
+    done
+    export ZEEBE_CONTACT_POINTS="${ZEEBE_CONTACT_POINTS}"
+    
+    #echo "put zeebe elastic exporter index_templates with shard replicas"
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-deployment" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-deployment-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-error" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-error-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-incident" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-incident-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-job-batch-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-job-batch-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-job-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-job-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-message-subscription-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-message-subscription-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-message-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-message-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-variable-document-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-variable-document-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-variable-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-variable-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-workflow-instance-creation-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-workflow-instance-creation-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-workflow-instance-subscription-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-workflow-instance-subscription-template.json
+    #curl -sX PUT "{{ .Values.elasticsearch.uri }}/_template/zeebe-record-workflow-instance-template" -H 'Content-Type: application/json' --data @/opt/es-templates/zeebe-record-workflow-instance-template.json
+
+    # [Optional] Remove/Delete business data before starting zeebe.
+    # This is needed to avoid request re-processing issue when zeebe is restarted after abrupt failure.. Make sure workflow files are re-deployed immediately after zeebe comes to Running state (i.e. after Broker is ready as per zeebe log).
+    # Abrupt failure may be due to
+    # a) Zeebe pod delete & auto start or
+    # b) VM restart (or even power off & on).
+
+    ### Custom actions
+    echo "TZ='Asia/Calcutta' date ; unset TZ ; date ; TZ='America/Lima' date ; unset TZ" > /usr/local/zeebe/bin/t ; chmod +x /usr/local/zeebe/bin/t
+
+    # Adding below script to copy the compressed data folder to the mounted log path
+
+    if [ ! -d /usr/local/zeebe/logs/data_bkup ]
+    then
+      mkdir -p /usr/local/zeebe/logs/data_bkup
+
+    fi
+
+    ls -ltr /usr/local/zeebe/logs/data_bkup/
+
+    if [ -d "/usr/local/zeebe/data" ]
+    then
+    	/usr/local/zeebe/bin/t
+    	du -ksh /usr/local/zeebe/data
+        cp -pr /usr/local/zeebe/data /usr/local/zeebe/data-bkp
+    	hostname=`hostname`
+    	dt=`TZ='America/Lima' date +%d-%m-%Y_%H-%M-%S ; unset TZ`
+    	filename=$hostname"-data_"$dt".tar.gz"
+        env GZIP=-9 tar -zcf "/usr/local/zeebe/logs/data_bkup/$filename" /usr/local/zeebe/data-bkp --remove-files &
+    fi
+
+    ### end of custom actions
+
+    exec /usr/local/zeebe/bin/broker
+
+  zeebe.cfg.toml: |
+    # Zeebe broker configuration file
+    # For more information about this configuration visit: https://docs.zeebe.io/operations/the-zeebecfgtoml-file.html
+
+    [threads]
+
+    # Controls the number of non-blocking CPU threads to be used. WARNING: You
+    # should never specify a value that is larger than the number of physical cores
+    # available. Good practice is to leave 1-2 cores for ioThreads and the operating
+    # system (it has to run somewhere). For example, when running Zeebe on a machine
+    # which has 4 cores, a good value would be 2.
+    #
+    # The default value is 2.
+    cpuThreadCount = {{ .Values.cputhreadcount }}
+
+    # Controls the number of io threads to be used. These threads are used for
+    # workloads that write data to disk. While writing, these threads are blocked
+    # which means that they yield the CPU.
+    #
+    # The default value is 2.
+    ioThreadCount = {{ .Values.iothreadcount }}
+
+    # An example configuration for the elasticsearch exporter:
+    #
+    # [[exporters]]
+    # id = "elasticsearch"
+    # className = "io.zeebe.exporter.ElasticsearchExporter"
+    #   [exporters.args]
+    #   url = "http://elasticsearch-client.elasticsearch:9200/"
+
+    #   [exporters.args.bulk]
+    #   delay = 5
+    #   size = 1_000
+
+    #   [exporters.args.authentication]
+    #   username =
+    #   password =
+
+    #   [exporters.args.index]
+    #   prefix = "zeebe-record"
+    #   createTemplate = true
+
+    #   command = true
+    #   event = true
+    #   rejection = true
+
+    #   deployment = true
+    #   error = true
+    #   incident = true
+    #   job = true
+    #   jobBatch = false
+    #   message = true
+    #   messageSubscription = true
+    #   variable = false
+    #   variableDocument = true
+    #   workflowInstance = true
+    #   workflowInstanceCreation = true
+    #   workflowInstanceSubscription = true
+    #[[exporters]]
+    #id = "hazelcast"
+    #className = "io.zeebe.hazelcast.exporter.HazelcastExporter"
+    #port = 5701
+    #deploymentTopic = "zeebe-deployments"
+    #workflowInstanceTopic = "zeebe-workflow-instances"
+    #jobTopic = "zeebe-jobs"
+    #incidentTopic = "zeebe-incidents"
+      #[exporters.args]
+      # comma separated list of io.zeebe.protocol.record.ValueType
+      #enabledValueTypes = "JOB,WORKFLOW_INSTANCE,DEPLOYMENT,INCIDENT,TIMER,VARIABLE,MESSAGE,MESSAGE_SUBSCRIPTION,MESSAGE_START_EVENT_SUBSCRIPTION"
+      #workflowInstanceSubscription = false
+  log4j2.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Configuration status="WARN">
+
+      <Properties>
+        <Property name="log.path">${sys:app.home}/logs</Property>
+        <Property name="log.pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{actor-name}] [%t] %-5level %logger{36} - %msg%n</Property>
+      </Properties>
+
+      <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+          <JSONLayout compact="${env:ZEEBE_JSON_LOG_COMPACT:-true}" eventEol="true" properties="true" includeStacktrace="true" stacktraceAsString="false" />
+        </Console>
+
+        <RollingRandomAccessFile name="RollingFile" fileName="${log.path}/zeebe.log" filePattern="${log.path}/zeebe-%d{yyyy-MM-dd}-%i.log.gz">
+          <PatternLayout>
+            <Pattern>%d{HH:mm:ss.SSS} [%X{actor-name}] [%t] %-5level %logger{36} - %msg%n</Pattern>
+          </PatternLayout>
+          <Policies>
+            <TimeBasedTriggeringPolicy/>
+            <SizeBasedTriggeringPolicy size="250 MB"/>
+          </Policies>
+        </RollingRandomAccessFile>
+      </Appenders>
+
+      <Loggers>
+        <Logger name="io.zeebe" level="${env:ZEEBE_LOG_LEVEL:-info}"/>
+
+        <Logger name="io.atomix" level="${env:ATOMIX_LOG_LEVEL:-warn}"/>
+
+        <Root level="info">
+          <AppenderRef ref="RollingFile"/>
+
+          <!-- remove to disable console logging -->
+          <AppenderRef ref="Console"/>
+        </Root>
+      </Loggers>
+
+    </Configuration>

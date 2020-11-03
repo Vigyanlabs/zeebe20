@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zeebe
+spec:
+  selector:
+    matchLabels:
+      app: zeebe
+  serviceName: zeebe
+  replicas: {{ .Values.zeebe_cluster_size }}
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: zeebe
+    spec:
+      terminationGracePeriodSeconds: 10
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - zeebe
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: zeebe
+        image: "{{ .Values.broker.image.repository }}:{{ .Values.broker.image.tag }}"
+        env:
+        - name: ZEEBE_LOG_LEVEL
+          value: {{ .Values.zeebe_log_level }}
+        - name: ZEEBE_PARTITIONS_COUNT
+          value: {{ .Values.zeebe_partitions_count  | quote }}
+        - name: ZEEBE_CLUSTER_SIZE
+          value: {{ .Values.zeebe_cluster_size  | quote }}
+        - name: ZEEBE_REPLICATION_FACTOR
+          value: {{ .Values.replication_factor  | quote }}
+        - name: ZEEBE_CLUSTER_NAME
+          value: {{ .Values.zeebe_cluster_name  | quote }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap {{ .Values.zeebe.java_heap }}"
+        - name: ZEEBE_GATEWAY_REQUEST_TIMEOUT
+          value: {{ .Values.zeebe_gateway_timeout  | quote }}
+        ports:
+        - containerPort: 9600
+          name: http
+        - containerPort: 26500
+          name: gateway
+        - containerPort: 26501
+          name: command
+        - containerPort: 26502
+          name: internal
+        - containerPort: 5701
+          name: hazelcast
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: {{ .Values.service.http.port }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        volumeMounts:
+        - name: zeebe-config-vol
+          mountPath: /usr/local/zeebe/conf
+        - name: startup-vol
+          mountPath: /usr/local/bin
+        - name: zeebe-data
+          mountPath: /usr/local/zeebe/data
+        - name: elastic-index-templates
+          mountPath: /opt/es-templates
+        {{- if .Values.hostpath.enabled }}
+        - name: zeebe-logs
+          mountPath: /usr/local/zeebe/logs
+        {{- end }}
+      volumes:
+      - name: zeebe-config-vol
+        projected:
+          defaultMode: 0744
+          sources:
+          - configMap:
+              name: zeebe-config
+              items:
+                - key: zeebe.cfg.toml
+                  path: zeebe.cfg.toml
+                - key: log4j2.xml
+                  path: log4j2.xml
+      - name: startup-vol
+        projected:
+          defaultMode: 0744
+          sources:
+          - configMap:
+              name: zeebe-config
+              items:
+                - key: startup.sh
+                  path: startup.sh
+      - name: elastic-index-templates
+        configMap:
+          name: zeebe-elastic-index-templates
+          defaultMode: 0777
+      {{- if .Values.hostpath.enabled }}
+      - name: zeebe-logs
+        hostPath:
+          path: {{ .Values.zeebe_log_path | quote }}
+          type: DirectoryOrCreate
+      {{- end -}}
+      {{- if not .Values.persistence.enabled }}
+      - name: zeebe-data
+        emptyDir: {}
+      {{- end -}}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: zeebe-data
+    spec:
+      accessModes: [{{ .Values.persistence.accessMode | quote }}]
+      {{- if .Values.persistence.storageClass }}
+      {{- if (eq "-" .Values.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: "{{ .Values.persistence.storageClass }}"
+      {{- end }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.persistence.size | quote }}
+  {{- end -}}
+  

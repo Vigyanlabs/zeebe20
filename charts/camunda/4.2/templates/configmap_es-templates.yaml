@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zeebe-elastic-index-templates
+data:
+  zeebe-record-deployment-template.json: |
+{{ .Files.Get "exporters/zeebe-record-deployment-template.json" | indent 4 }}
+  zeebe-record-error-template.json: |
+{{ .Files.Get "exporters/zeebe-record-error-template.json" | indent 4 }}
+  zeebe-record-incident-template.json: |
+{{ .Files.Get "exporters/zeebe-record-incident-template.json" | indent 4 }}
+  zeebe-record-job-batch-template.json: |
+{{ .Files.Get "exporters/zeebe-record-job-batch-template.json" | indent 4 }}
+  zeebe-record-job-template.json: |
+{{ .Files.Get "exporters/zeebe-record-job-template.json" | indent 4 }}
+  zeebe-record-message-subscription-template.json: |
+{{ .Files.Get "exporters/zeebe-record-message-subscription-template.json" | indent 4 }}
+  zeebe-record-message-template.json: |
+{{ .Files.Get "exporters/zeebe-record-message-template.json" | indent 4 }}
+  zeebe-record-template.json: |
+{{ .Files.Get "exporters/zeebe-record-template.json" | indent 4 }}
+  zeebe-record-variable-document-template.json: |
+{{ .Files.Get "exporters/zeebe-record-variable-document-template.json" | indent 4 }}
+  zeebe-record-variable-template.json: |
+{{ .Files.Get "exporters/zeebe-record-variable-template.json" | indent 4 }}
+  zeebe-record-workflow-instance-creation-template.json: |
+{{ .Files.Get "exporters/zeebe-record-workflow-instance-creation-template.json" | indent 4 }}
+  zeebe-record-workflow-instance-subscription-template.json: |
+{{ .Files.Get "exporters/zeebe-record-workflow-instance-subscription-template.json" | indent 4 }}
+  zeebe-record-workflow-instance-template.json: |
+{{ .Files.Get "exporters/zeebe-record-workflow-instance-template.json" | indent 4 }}

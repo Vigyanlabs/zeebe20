@@ -1,0 +1,42 @@
+{{- if .Values.ingress.operate.enabled -}}
+{{- $fullName := include "camunda.fullname" . -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: "{{ include "camunda.fullname" . }}-operate"
+  labels:
+    app.kubernetes.io/name: "{{ include "camunda.name" . }}-operate"
+    helm.sh/chart: {{ include "camunda.chart" . | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+  {{- with .Values.ingress.operate.annotations }}
+  annotations:
+{{- toYaml . | indent 4 }}
+  {{- end }}
+spec:
+{{- if .Values.ingress.operate.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.operate.host | quote }}
+{{- with .Values.ingress.operate.tls.secret }}
+      secretName: {{ . | quote }}
+{{- end }}
+{{- end }}
+  rules:
+    - host: {{ .Values.ingress.operate.host | quote }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: "{{ include "camunda.fullname" . }}-operate"
+              servicePort: http
+    {{- if .Values.haproxy.enabled -}}
+    - host: {{ .Values.haproxy.host | quote }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: "{{ include "camunda.fullname" . }}-operate"
+              servicePort: http
+    {{- end }}
+{{- end }}

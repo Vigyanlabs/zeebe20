@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ include "camunda.fullname" . }}-operate"
+  labels:
+    app.kubernetes.io/name: "{{ include "camunda.name" . }}-operate"
+    helm.sh/chart: {{ include "camunda.chart" . | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: "{{ include "camunda.name" . }}-operate"
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}

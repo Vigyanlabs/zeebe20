@@ -1,0 +1,33 @@
+{
+  "index_patterns": [
+    "zeebe-record-variable-document_*"
+  ],
+  "order": 20,
+  "aliases": {
+    "zeebe-record-variable-document": {}
+  },
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "value": {
+          "dynamic": "strict",
+          "properties": {
+            "scopeKey": {
+              "type": "long"
+            },
+            "updateSemantics": {
+              "type": "keyword"
+            },
+            "variables": {
+              "enabled": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "index_patterns": [
+    "zeebe-record-message_*"
+  ],
+  "order": 20,
+  "aliases": {
+    "zeebe-record-message": {}
+  },
+  "settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "value": {
+          "dynamic": "strict",
+          "properties": {
+            "name": {
+              "type": "keyword"
+            },
+            "correlationKey": {
+              "type": "text"
+            },
+            "messageId": {
+              "type": "keyword"
+            },
+            "timeToLive": {
+              "type": "long"
+            },
+            "variables": {
+              "enabled": false
+            }
+          }
+        }
+      }
+    }
+  }
+}
